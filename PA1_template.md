@@ -1,0 +1,144 @@
+# Personal Activity Monitoring Study
+
+##Reproducible Research
+###AK
+###Assigment 1
+
+
+
+PA1_template.Rmd  
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+###Loading and preprocessing the data
+
+
+```r
+#Load data file and change dates from text
+activity <- read.csv("./Data/activity.csv")
+activity$realDate <- as.Date(activity$date, "%Y-%m-%d")
+```
+
+###The mean of the total number of steps taken per day
+
+Calculate the total number of steps for each day. Print the results in a histogram
+
+
+```r
+#Aggregate data to calculate total steps per day
+activitySum <- aggregate(steps ~ date, data=activity, FUN=sum, na.rm=TRUE)
+
+#Plot aggregated data in a histogram
+ggplot(data=activitySum, aes(activitySum$steps)) + geom_histogram(col="red", fill="blue", alpha=0.9) + labs(title="Histogram of total number of steps taken a day", x="Total number of steps", y="Count")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+
+The histogram shows that most days between 500 and 1500 steps were taken.
+
+Mean of the total number of steps taken per day
+
+```r
+aSm <- as.integer(mean(as.numeric(activitySum[,2])))
+```
+**_The average value of the total number of steps taken per day is 10766._**
+
+Median of the total number of steps taken per day
+
+```r
+aSmed <- as.integer(median(as.numeric(activitySum[,2])))
+```
+
+**_The median value of the total number of steps taken per day is 10765._**
+
+**_The difference between the mean and the median is 1. These results also line up with the results from the histogram._**
+
+###Average daily activity pattern
+
+The average number of steps over days, plotted versus the time intervals.
+
+
+```r
+#Aggregate the mean for each interval over days
+activityInt <- aggregate(steps ~ interval, data=activity, FUN=mean, na.rm=TRUE)
+
+#Plot the results
+ggplot(data=activityInt, aes(interval, steps)) + geom_line(col="red") + labs(title="Average number of steps taken a day vs. Interval", x="Interval", y="Average number of steps")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 
+
+Find the 5 minute interval whith the most number of steps averaged accross all days.
+
+
+```r
+#Calculate the maximum number of average steps
+aIMS <- max(activityInt$steps)
+#Find the corresponding interval number
+aIMI <- activityInt$interval[activityInt$steps == aIMS]
+```
+
+**_The maximum number of steps is 206. It occurs in interval 835._**
+
+###Imputing missing values; 
+
+
+```r
+numNA <- sum(is.na(activity$steps))
+```
+
+**_The number of missing values in the data frame is 2304._**
+
+The missing values (NA), are replaced with the average number of steps for an interval.
+
+
+```r
+#Copy the data
+activityImp <- activity
+#Replace the NA values with the averages
+activityImp$steps <- with(activity, impute(steps, mean))
+#Calculate the daily total of steps with the imputed data
+activityImpSum <- aggregate(steps ~ date, data=activityImp, FUN=sum)
+#Plot the data in a histogram
+ggplot(data=activityImpSum, aes(activityImpSum$steps)) + geom_histogram(col="red", fill="blue", alpha=0.9) + labs(title="Histogram of total number of steps taken a day", x="Total number of steps", y="Count")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+
+Mean of the total number of steps taken per day
+
+```r
+aSmI <- as.integer(mean(as.numeric(activityImpSum[,2])))
+DaSmI <- aSm-aSmI
+```
+The average value of the total number of steps taken per day is 10766. The difference is 0.
+
+Median of the total number of steps taken per day
+
+```r
+aSmedI <- as.integer(median(as.numeric(activityImpSum[,2])))
+DaSmed <- aSmed-aSmedI
+```
+
+The median value of the total number of steps taken per day is 10765. The difference is -1.
+
+**_The median and mean values changed very little as expected since mean values were substituted to the earlier disregarded places. The histogram increased at the median / mean value as expected. Otherwise the plot looks very similar._**
+
+###Weekday and Weekend activity pattern
+
+
+```r
+#Find the days for each date
+activityImp$day <- weekdays(activityImp$realDate)
+#is.weekend <- function(x) {r <- ((as.numeric(x)-2) %% 7 < 2) return(r)}
+#Fill the day category column with weekdays and replace them with weekends for Sat and Sun
+activityImp$dayCat <- "weekday"
+activityImp$dayCat[activityImp$day == "Sunday" | activityImp$day == "Saturday"] <- "weekend"
+#Aggregate the data based on intervals as well as day category
+activityImpInt <- aggregate(steps ~ interval + dayCat, data=activityImp, FUN=mean)
+#Plot the results
+xyplot(steps~interval|dayCat,activityImpInt,type="l",layout=c(1,2), ylab = "Number of Steps", xlab="Interval", title="Comparison of weekend and weekday activity patterns")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-12-1.png) 
+
+**_The distribution of the activity changes significantly between weekdays and weekends. Weekdays have four distinct peaks. The first peak is significantly higher than the others. The weekend plots have much more even distribution._**
